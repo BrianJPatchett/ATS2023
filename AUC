@@ -1,0 +1,34 @@
+library(pROC)
+
+data <- read.csv(file = "updatedigedatabase.csv", header = TRUE)
+
+for(i in 1:25) {
+  col_name <- paste0("y_", i)
+  log_col_name <- paste0("log_", col_name)
+  data[[log_col_name]] <- ifelse(data[[col_name]] > 0.001, 1, 0)
+}
+
+AUC_df <- data.frame(
+  Response = character(0),
+  AUC = numeric(0),
+  stringsAsFactors = FALSE
+)
+
+for(i in 1:25) {
+  response_var <- paste0("log_y_", i)
+  formula <- as.formula(paste(response_var, "~ BMI"))
+  model <- glm(formula, data = data, family = "binomial")
+  prediction <- predict(model, data, type = "response")
+  roc <- roc(data[[response_var]], prediction)
+  
+  #Get AUC
+  AUC <- auc(roc)
+  
+  # Store the results
+  AUC_df <- rbind(AUC_df, data.frame(
+    Response = response_var,
+    AUC = AUC
+  ))
+}
+
+cat(mean(AUC_df$AUC), min(AUC_df$AUC), max(AUC_df$AUC), '\n')
